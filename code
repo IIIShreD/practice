@@ -1,0 +1,632 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace кредитная_оганизация
+{
+    public partial class Обновить_график : Form
+    {
+        DB DB = new DB();
+        public int idPoint = 0;
+        public string SalePoint = "";
+        public int id = 0;
+        int selectedRow;
+        public Обновить_график()
+        {
+            InitializeComponent();
+        }
+
+        private void Обновить_график_Load(object sender, EventArgs e)
+        {
+            label2.Text = SalePoint;
+            CreateColumns();
+            RefreshDataGrid(dataGridView1);
+        }
+
+        private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            selectedRow = e.RowIndex;
+            if (e.RowIndex >= 0)
+            {
+                DataGridViewRow row = dataGridView1.Rows[selectedRow];
+                id = Convert.ToInt32(row.Cells[0].Value.ToString());
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (id != 0)
+            {
+                DateTime selectedDate = dateTimePicker1.Value;
+                string dateString = selectedDate.ToShortDateString();
+                dateString.ToString();
+
+                string stas = $"select Workdate from EmployeeSchedule where Workdate = '{dateString}' and EmployeeId = {id};";
+                SqlCommand sqlCommand1 = new SqlCommand(stas, DB.getConnection);
+                DB.OpenConnection();
+                SqlDataReader reader = sqlCommand1.ExecuteReader();
+                if (!reader.HasRows)
+                {
+                    if (textBox1.Text != "")
+                    {
+                        int n;
+                        bool isNumber = int.TryParse(textBox1.Text, out n);
+                        if (isNumber)
+                        {
+                            if (n <= 12 & n >= 4)
+                            {
+                                string status = $"insert into EmployeeSchedule (EmployeeId, SalePointId, WorkTime, Workdate) values ('{id}', '{idPoint}', '{n}', '{dateString}');";
+                                SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+                                DB.OpenConnection();
+                                sqlCommand.ExecuteNonQuery();
+                                MessageBox.Show("График обновлен", "Error", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            } else MessageBox.Show("Время работы должно быть от 4 до 12 часов", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        } else MessageBox.Show("Время введено не корректно", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    } else MessageBox.Show("Время работы не выбрано", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                } else MessageBox.Show("Сотрудник уже работает в этот день", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            } else MessageBox.Show("Сотрудник не выбран", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); 
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (id != 0)
+            {
+                DateTime selectedDate = dateTimePicker1.Value;
+                string dateString = selectedDate.ToShortDateString();
+                dateString.ToString();
+
+                string stas = $"select Workdate from EmployeeSchedule where Workdate = '{dateString}' and EmployeeId = {id};";
+                SqlCommand sqlCommand1 = new SqlCommand(stas, DB.getConnection);
+                DB.OpenConnection();
+                SqlDataReader reader = sqlCommand1.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    string status = $"delete from EmployeeSchedule where EmployeeId = {id} and Workdate = '{dateString}';";
+                    SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+                    DB.OpenConnection();
+                    sqlCommand.ExecuteNonQuery();
+                    MessageBox.Show("График обновлен", "Error", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }  else MessageBox.Show("Сотрудник не работает в этот день", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); 
+            } else MessageBox.Show("Сотрудник не выбран", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); 
+        }
+        //создание столбцов в dataGridView
+        private void CreateColumns()
+        {
+            dataGridView1.Columns.Add("EmployeeID", "EmployeeID");
+            dataGridView1.Columns.Add("FullName", "FullName");
+            dataGridView1.Columns.Add("Position", "Position");
+            dataGridView1.Columns.Add("PhoneNumber", "PhoneNumber");
+            dataGridView1.Columns.Add("Email", "Email");
+        }
+
+        //функция добавления строк в dataGridView
+        private void ReadSinglRow(DataGridView dgw, IDataRecord record)
+        {
+            dgw.Rows.Add(record.GetInt32(0), record.GetString(1), record.GetString(2), record.GetString(3), record.GetString(4));
+        }
+        //обновление отображаемых данных
+        private void RefreshDataGrid(DataGridView dgw)
+        {
+            dgw.Rows.Clear();
+            string status = $"select * from Employees;";
+            SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+            DB.OpenConnection();
+            SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                ReadSinglRow(dgw, reader);
+            }
+            reader.Close();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Точки точки = new Точки();
+            точки.Show();
+            this.Hide();
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            График g = new График();
+            g.id = id;
+            g.Pointid = idPoint;
+            g.SalePoint = SalePoint;
+            g.Show();
+            this.Hide();
+        }
+
+        private void Обновить_график_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
+        }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+
+namespace кредитная_оганизация
+{
+    enum RoWState
+    {
+        Existed,
+        Deleted
+    }
+    public partial class Точки : Form
+    {
+        DB DB = new DB();
+        int id = 0;
+        int selectedRow;
+        string SaleP;
+
+        public Точки()
+        {
+            InitializeComponent();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            НоваяТочка нт = new НоваяТочка();
+            нт.Show();
+            this.Hide();
+        }
+
+        private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            selectedRow = e.RowIndex;
+            if (e.RowIndex >= 0)
+            {
+                DataGridViewRow row = dataGridView1.Rows[selectedRow];
+                id = Convert.ToInt32(row.Cells[0].Value.ToString());
+                SaleP = row.Cells[1].Value.ToString();
+            }
+        }
+
+        //удаление выбранной строки из бд
+        private void Update()
+        {
+            string del = $"delete from SalesPoints where PointID = '{id}'";
+            DB db = new DB();
+            var command = new SqlCommand(del, db.getConnection);
+            db.OpenConnection();
+            command.ExecuteNonQuery();
+            db.CloseConnection();
+        }
+
+
+
+        private void DeleteRow()
+        {
+            if (dataGridView1.CurrentCell != null && dataGridView1.CurrentCell.RowIndex >= 0 && dataGridView1.CurrentCell.RowIndex < dataGridView1.Rows.Count)
+            {
+                int index = dataGridView1.CurrentCell.RowIndex;
+                dataGridView1.Rows[index].Visible = false;
+                if (dataGridView1.Rows[index].Cells[0].Value.ToString() == String.Empty)
+                {
+                    dataGridView1.Rows[index].Cells[2].Value = RoWState.Deleted;
+                    return;
+                }
+                dataGridView1.Rows[index].Cells[2].Value = RoWState.Deleted;
+            }
+            else MessageBox.Show("Точка не выбрана", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        //создание столбцов в dataGridView
+        private void CreateColumns()
+        {
+            dataGridView1.Columns.Add("Id", "PointID");
+            dataGridView1.Columns.Add("Название", "PointName");
+            dataGridView1.Columns.Add("Адрес", "Address");         
+        }
+
+        //функция добавления строк в dataGridView
+        private void ReadSinglRow(DataGridView dgw, IDataRecord record)
+        {
+            dgw.Rows.Add(record.GetInt32(0), record.GetString(1), record.GetString(2));
+        }
+        //обновление отображаемых данных
+        private void RefreshDataGrid(DataGridView dgw)
+        {
+            dgw.Rows.Clear();
+            string status = $"select * from SalesPoints;";
+            SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+            DB.OpenConnection();
+            SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                ReadSinglRow(dgw, reader);
+            }
+            reader.Close();
+        }
+
+        private void Точки_Load(object sender, EventArgs e)
+        {
+            CreateColumns();
+            RefreshDataGrid(dataGridView1);
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (id != 0)
+            {
+                DeleteRow();
+                Update();
+            } else MessageBox.Show("Точка не выбрана", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        
+
+        private void Точки_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (id != 0)
+            {
+                Обновить_график ug = new Обновить_график();
+                ug.idPoint = id;
+                ug.SalePoint = SaleP;
+                ug.Show();
+                this.Hide();
+            } else MessageBox.Show("Точка не выбрана", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+
+namespace кредитная_оганизация
+{
+    public partial class НоваяТочка : Form
+    {
+        DB DB = new DB();
+        public НоваяТочка()
+        {
+            InitializeComponent();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Точки тч = new Точки();
+            тч.Show();
+            this.Hide();
+        }
+
+        private void НоваяТочка_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
+            var loginUser = textBox1.Text;
+            var passwordUser = textBox2.Text;
+            string select = $"INSERT INTO SalesPoints (PointName, Address) VALUES ('{loginUser}', '{passwordUser}')";
+            SqlCommand command = new SqlCommand(select, DB.getConnection);
+            DB.OpenConnection();
+
+            if (command.ExecuteNonQuery() == 1)
+            {
+                MessageBox.Show("Точка успешно добавлена", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                Точки login = new Точки();
+                login.Show();
+                this.Hide();
+            }
+            else
+            {
+                MessageBox.Show("Косяк", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            DB.CloseConnection();
+
+        }
+
+    }
+}
+
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Text.RegularExpressions;
+
+
+namespace кредитная_оганизация
+{
+    public partial class reg : Form
+    {
+        DB DB = new DB();
+        public reg()
+        {
+            InitializeComponent();
+        }
+
+        //функция проверки уникальности логина
+        private Boolean checkUser()
+        {
+            //получение данных записанных в текстбокс
+            var loginUser = textBox3.Text;
+            //создание и выполнение запроса на проверку логина
+            SqlDataAdapter sqlDataAdapter = new SqlDataAdapter();
+            DataTable dataTable = new DataTable();
+            string select = $"select EmployeeID, login, password  from Employees where login='{loginUser}'";
+            SqlCommand command = new SqlCommand(select, DB.getConnection);
+            sqlDataAdapter.SelectCommand = command;
+            sqlDataAdapter.Fill(dataTable);
+            if (dataTable.Rows.Count > 0)
+            {
+                MessageBox.Show("Такой логин уже есть", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return true;
+            }
+            else { return false; }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            Логин лг = new Логин();
+            лг.Show();
+            this.Hide();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            //запуск функции
+            if (checkUser())
+            {
+                return;
+            }
+
+            var loginUser = textBox1.Text;
+            var passwordUser = textBox2.Text;
+            var passwordUser2 = textBox3.Text;
+            var fullname = textBox4.Text;
+            var positon = textBox5.Text;
+            var phone = textBox6.Text;
+            var email = textBox7.Text;
+            string select = $"INSERT INTO Employees (FullName, Position, PhoneNumber, Email, login, password) VALUES ('{fullname}', '{positon}', '{phone}', '{email}', '{loginUser}', '{passwordUser}')";
+            SqlCommand command = new SqlCommand(select, DB.getConnection);
+            if (passwordUser == passwordUser2) {
+                if (email.Contains("@"))
+                {
+                    if (loginUser != "" & passwordUser != "" & passwordUser2 != "" & fullname != "" & positon != "" & phone != "" & email != "")
+                    {
+                        if (phone.Contains("1") || phone.Contains("2") || phone.Contains("3") || phone.Contains("4") || phone.Contains("5") || phone.Contains("6") || phone.Contains("7") || phone.Contains("8") || phone.Contains("9") || phone.Contains("0") || phone.Contains("+") || phone.Contains("-")) {
+                            DB.OpenConnection();
+
+                            if (command.ExecuteNonQuery() == 1)
+                            {
+                                MessageBox.Show("Вы успешно зарегистрированы", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                Логин login = new Логин();
+                                login.Show();
+                                this.Hide();
+                            } else MessageBox.Show("Косяк", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            DB.CloseConnection();
+                        } else MessageBox.Show("Неверный формат номера телефона", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    } else MessageBox.Show("Поля не заполнены", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                } else MessageBox.Show("Неверный формат эл-почты", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            } else MessageBox.Show("Пароли не совпадают", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+        }
+
+        private void reg_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
+
+        }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace кредитная_оганизация
+{
+    public partial class Логин : Form
+    {
+        DB DB = new DB();
+        public Логин()
+        {
+            InitializeComponent();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            //открытие подключения и получение данных записанных в текстбоксы
+            DB.OpenConnection();
+            var loginUser = textBox3.Text;
+            var passwordUser = textBox2.Text;
+            //создание и выполнение запроса на проверку логина и пароля
+            SqlDataAdapter sqlDataAdapter = new SqlDataAdapter();
+            DataTable dataTable = new DataTable();
+            string select = $"select EmployeeID, login, password from Employees where login='{loginUser}' and password='{passwordUser}'";
+            SqlCommand command = new SqlCommand(select, DB.getConnection);
+            sqlDataAdapter.SelectCommand = command;
+            sqlDataAdapter.Fill(dataTable);
+            //проверка на правильность ввода данных
+            if (dataTable.Rows.Count == 1 )
+            {
+                if (loginUser == "admin") {
+                    MessageBox.Show("Вы успешно вошли", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Точки main = new Точки();
+
+                    main.Show();
+                    this.Hide();
+                } else
+                {
+                    График график = new График();
+                    string value = "";
+                    string status = $"select * from Employees where login = '{loginUser}';";
+                    SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+                    DB.OpenConnection();
+                    SqlDataReader reader = sqlCommand.ExecuteReader();
+                    if (reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            value = reader["EmployeeID"].ToString();
+                        }
+                    }
+                    график.id = Convert.ToInt32(value);
+                    график.a = 1;
+                    график.Show();
+                    this.Hide();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Ошибка авторизации! Неверный логин или пароль", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            DB.CloseConnection();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            reg reg = new reg();
+            reg.Show();
+            this.Hide();
+        }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace кредитная_оганизация
+{
+    public partial class График : Form
+    {
+        public int id;
+        public int Pointid;
+        public string SalePoint = "";
+        public int a = 0;
+        DB DB = new DB();
+        public График()
+        {
+            InitializeComponent();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Обновить_график f = new Обновить_график();
+            f.id = id;
+            f.idPoint = Pointid;
+            f.SalePoint = SalePoint;
+            f.Show();
+            this.Hide();
+        }
+
+        //создание столбцов в dataGridView
+        private void CreateColumns()
+        {
+            dataGridView1.Columns.Add("ScheduleID", "ScheduleID");
+            dataGridView1.Columns.Add("EmployeeId", "EmployeeId");
+            dataGridView1.Columns.Add("SalePointId", "SalePointId");
+            dataGridView1.Columns.Add("WorkTime", "WorkTime");
+            dataGridView1.Columns.Add("Workdate", "Workdate");
+        }
+
+        //функция добавления строк в dataGridView
+        private void ReadSinglRow(DataGridView dgw, IDataRecord record)
+        {
+            dgw.Rows.Add(record.GetInt32(0), record.GetInt32(1), record.GetInt32(2), record.GetString(3), record.GetString(4));
+        }
+        //обновление отображаемых данных
+        private void RefreshDataGrid(DataGridView dgw)
+        {
+            dgw.Rows.Clear();
+            string status = $"select * from EmployeeSchedule where EmployeeId = {id};";
+            SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+            DB.OpenConnection();
+            SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                ReadSinglRow(dgw, reader);
+            }
+            reader.Close();
+        }
+
+        private void График_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void График_Load(object sender, EventArgs e)
+        {
+            CreateColumns();
+            RefreshDataGrid(dataGridView1);
+            string value = "";
+            string value1 = "";
+            string status = $"select * from Employees where EmployeeID = {id};";
+            SqlCommand sqlCommand = new SqlCommand(status, DB.getConnection);
+            DB.OpenConnection();
+            SqlDataReader reader = sqlCommand.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    value = reader["FullName"].ToString();
+                    value1 = reader["Position"].ToString();
+                }
+            }
+            textBox1.Text = value;
+            textBox2.Text = value1;
+            if (a == 1) button1.Visible = false;
+        }
+    }
+}
+
