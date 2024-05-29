@@ -1,0 +1,51 @@
+create database Сотрудники;
+use Сотрудники;
+
+ CREATE TABLE Employees (
+    EmployeeID INT PRIMARY KEY identity(1, 1),
+    FullName VARCHAR(100),
+    Position VARCHAR(50),
+    PhoneNumber VARCHAR(20),
+    Email VARCHAR(100),
+    login VARCHAR(100),
+    password VARCHAR(100)
+);
+
+CREATE TABLE EmployeeSchedule (
+    ScheduleID INT PRIMARY KEY identity(1, 1),
+    EmployeeId INT,
+    SalePointId int,
+    WorkTime VARCHAR(100),
+    Workdate VARCHAR(100)
+);
+
+CREATE TABLE SalesPoints (
+    PointID INT PRIMARY KEY identity(1, 1),
+    PointName VARCHAR(100),
+    Address VARCHAR(100)
+);
+
+
+CREATE TABLE PayrollDocuments (
+    DocumentID INT PRIMARY KEY identity(1, 1),
+    SalaryAmount DECIMAL(10, 2),
+    PaymentDate VARCHAR(100),
+    Status VARCHAR(20)
+);
+
+INSERT INTO Employees (login, password, FullName, Position, PhoneNumber, Email)
+VALUES ('a', 'a', 'John Doe', 'Accountant', '123-456-7890', 'john.doe@gmail.com'),
+       ('ф', 'ф', 'Jane Smith', 'Sales Associate', '234-567-8901', 'jane.smith@gmail.com'),
+       ('ss', 'ss', 'Tom Johnson', 'Accountant', '345-678-9012', 'tom.johnson@gmail.com'),
+       ('admin', 'admin', 'Mark Hansen', 'Admin', '345-678-9014', 'admin@gmail.com');
+
+
+INSERT INTO SalesPoints (PointName, Address)
+VALUES ('Store A', '123 Main St, City, State'),
+       ('Store B', '456 Elm St, City, State');
+
+INSERT INTO PayrollDocuments (SalaryAmount, PaymentDate, Status)
+VALUES (5000.00, '2022-01-31', 'Paid'),
+       (3000.00, '2022-01-31', 'Paid'),
+       (4000.00, '2022-01-31', 'Paid');
+
